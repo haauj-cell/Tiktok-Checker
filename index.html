@@ -20,16 +20,14 @@
 </head>
 <body class="min-h-screen text-slate-100 flex flex-col items-center p-4 sm:p-6">
 
-  <!-- Header -->
   <header class="w-full max-w-md text-center my-6">
     <div class="inline-flex items-center gap-2 mb-2">
       <i class="fa-brands fa-tiktok text-3xl text-[#00f2fe]"></i>
       <h1 class="text-3xl font-extrabold tracking-tight tiktok-gradient-text">TikTok Checker</h1>
     </div>
-    <p class="text-slate-400 text-xs sm:text-sm">Tra cứu thông tin tài khoản TikTok thời gian thực</p>
+    <p class="text-slate-400 text-xs sm:text-sm">Tra cứu thông tin tài khoản TikTok trực tiếp</p>
   </header>
 
-  <!-- Main Box -->
   <main class="w-full max-w-md bg-[#1e2030]/90 border border-slate-700/60 backdrop-blur-md rounded-2xl p-5 sm:p-6 shadow-2xl">
     
     <!-- Search Input -->
@@ -53,7 +51,7 @@
       </button>
     </div>
 
-    <!-- Alert / Status -->
+    <!-- Alert Status -->
     <div id="statusBox" class="hidden mt-4 p-4 rounded-xl text-sm font-medium break-words"></div>
 
     <!-- Loading Skeleton -->
@@ -69,7 +67,6 @@
 
     <!-- Result Card -->
     <div id="resultBox" class="hidden mt-6 flex flex-col items-center">
-      
       <div class="relative">
         <img 
           id="userAvatar" 
@@ -86,19 +83,19 @@
       <div class="grid grid-cols-2 gap-2.5 w-full mb-4 text-center">
         <div class="bg-[#13141f] border border-slate-800 p-3 rounded-xl">
           <span class="text-slate-400 text-[11px] uppercase font-medium block">Followers</span>
-          <span id="statFollowers" class="text-base font-extrabold text-[#00f2fe]">--</span>
+          <span id="statFollowers" class="text-base font-extrabold text-[#00f2fe]">0</span>
         </div>
         <div class="bg-[#13141f] border border-slate-800 p-3 rounded-xl">
           <span class="text-slate-400 text-[11px] uppercase font-medium block">Đang Follow</span>
-          <span id="statFollowing" class="text-base font-extrabold text-white">--</span>
+          <span id="statFollowing" class="text-base font-extrabold text-white">0</span>
         </div>
         <div class="bg-[#13141f] border border-slate-800 p-3 rounded-xl">
           <span class="text-slate-400 text-[11px] uppercase font-medium block">Lượt Thích</span>
-          <span id="statLikes" class="text-base font-extrabold text-[#ff0050]">--</span>
+          <span id="statLikes" class="text-base font-extrabold text-[#ff0050]">0</span>
         </div>
         <div class="bg-[#13141f] border border-slate-800 p-3 rounded-xl">
           <span class="text-slate-400 text-[11px] uppercase font-medium block">Video</span>
-          <span id="statVideos" class="text-base font-extrabold text-amber-400">--</span>
+          <span id="statVideos" class="text-base font-extrabold text-amber-400">0</span>
         </div>
       </div>
 
@@ -115,13 +112,45 @@
 
   <script>
     function formatNumber(num) {
-      if (num === null || num === undefined || isNaN(num)) return '--';
+      if (num === null || num === undefined || isNaN(Number(num))) return '--';
       return Number(num).toLocaleString('vi-VN');
     }
 
     document.getElementById('usernameInput').addEventListener('keypress', (e) => {
       if (e.key === 'Enter') checkTikTokUser();
     });
+
+    // Gọi API qua JSONP Proxy an toàn không bao giờ dính CORS trên Safari
+    function fetchJsonp(url) {
+      return new Promise((resolve, reject) => {
+        const callbackName = 'jsonp_cb_' + Math.round(100000 * Math.random());
+        const script = document.createElement('script');
+        
+        window[callbackName] = function(data) {
+          delete window[callbackName];
+          if (script.parentNode) script.parentNode.removeChild(script);
+          resolve(data);
+        };
+
+        script.onerror = function() {
+          delete window[callbackName];
+          if (script.parentNode) script.parentNode.removeChild(script);
+          reject(new Error('Lỗi kết nối proxy'));
+        };
+
+        script.src = `https://api.allorigins.win/get?url=${encodeURIComponent(url)}&callback=${callbackName}`;
+        document.body.appendChild(script);
+
+        // Timeout 8s
+        setTimeout(() => {
+          if (window[callbackName]) {
+            delete window[callbackName];
+            if (script.parentNode) script.parentNode.removeChild(script);
+            reject(new Error('Hết thời gian chờ phản hồi'));
+          }
+        }, 8000);
+      });
+    }
 
     async function checkTikTokUser() {
       const input = document.getElementById('usernameInput');
@@ -143,76 +172,60 @@
       const resultBox = document.getElementById('resultBox');
 
       checkBtn.disabled = true;
-      checkBtn.classList.add('opacity-50');
+      checkBtn.style.opacity = '0.5';
       statusBox.classList.add('hidden');
       resultBox.classList.add('hidden');
       loadingBox.classList.remove('hidden');
 
-      let success = false;
-
-      // Phương án 1: Gọi API Countik qua Worker trung chuyển đa tầng
       try {
-        const countikRes = await fetch(`https://api.allorigins.win/get?url=${encodeURIComponent('https://countik.com/api/exist/' + username)}`);
-        if (countikRes.ok) {
-          const jsonWrap = await countikRes.json();
-          const existData = JSON.parse(jsonWrap.contents);
-
-          if (existData && existData.sec_uid) {
-            const detailRes = await fetch(`https://api.allorigins.win/get?url=${encodeURIComponent('https://countik.com/api/user/id/' + existData.sec_uid)}`);
-            if (detailRes.ok) {
-              const detailWrap = await detailRes.json();
-              const userData = JSON.parse(detailWrap.contents);
-              if (userData && userData.status !== false) {
-                renderUI({
-                  username: username,
-                  nickname: userData.nickname || username,
-                  avatar: userData.avatar,
-                  followers: userData.follower_count,
-                  following: userData.following_count,
-                  likes: userData.heart_count || userData.heart,
-                  videos: userData.video_count
-                });
-                success = true;
-              }
-            }
-          }
+        // 1. Lấy sec_uid từ Countik exist API
+        const existRes = await fetchJsonp(`https://countik.com/api/exist/${username}`);
+        if (!existRes || !existRes.contents) {
+          throw new Error('Máy chủ Countik không phản hồi.');
         }
-      } catch (e) {
-        // Tiếp tục thử phương án dự phòng nếu Countik bị chặn
-      }
 
-      // Phương án 2 (Dự phòng): Gọi TikTok OEMBED trực tiếp (Không bao giờ bị CORS)
-      if (!success) {
+        let existData;
         try {
-          const oembedRes = await fetch(`https://www.tiktok.com/oembed?url=https://www.tiktok.com/@${username}`);
-          if (oembedRes.ok) {
-            const oembedData = await oembedRes.json();
-            renderUI({
-              username: username,
-              nickname: oembedData.author_name || username,
-              avatar: `https://images.weserv.nl/?url=https://www.tiktok.com/favicon.ico`,
-              followers: 'Chặn bởi IP',
-              following: '--',
-              likes: '--',
-              videos: '--'
-            });
-            showStatus('Lưu ý: Đã tìm thấy tài khoản, nhưng TikTok/Countik đang giới hạn IP tra cứu số liệu tự động.', 'warning');
-            success = true;
-          } else if (oembedRes.status === 404) {
-            throw new Error('Tài khoản TikTok này không tồn tại hoặc đã đổi tên.');
-          }
-        } catch (err) {
-          showStatus(err.message || 'Không thể kết nối đến TikTok hoặc tài khoản không tồn tại.', 'error');
+          existData = JSON.parse(existRes.contents);
+        } catch(e) {
+          throw new Error('API Countik tạm thời khóa truy cập IP này.');
         }
-      }
 
-      if (!success) {
-        showStatus('Không thể tìm thấy thông tin tài khoản hoặc API Countik đang bảo trì.', 'error');
-      }
+        if (!existData || existData.status === false || !existData.sec_uid) {
+          throw new Error('Tài khoản không tồn tại hoặc bị khóa.');
+        }
 
-      checkBtn.disabled = false;
-      checkBtn.classList.remove('opacity-50');
-      loadingBox.classList.add('hidden');
+        // 2. Lấy thông số chi tiết qua sec_uid
+        const detailRes = await fetchJsonp(`https://countik.com/api/user/id/${existData.sec_uid}`);
+        let userData;
+        try {
+          userData = JSON.parse(detailRes.contents);
+        } catch(e) {
+          throw new Error('Không thể đọc dữ liệu tài khoản.');
+        }
+
+        if (!userData || userData.status === false) {
+          throw new Error('Không tải được số liệu chi tiết.');
+        }
+
+        // 3. Render giao diện
+        renderUI({
+          username: username,
+          nickname: userData.nickname || username,
+          avatar: userData.avatar,
+          followers: userData.follower_count,
+          following: userData.following_count,
+          likes: userData.heart_count || userData.heart,
+          videos: userData.video_count
+        });
+
+      } catch (err) {
+        showStatus(err.message || 'Lỗi không xác định khi tra cứu.', 'error');
+      } finally {
+        checkBtn.disabled = false;
+        checkBtn.style.opacity = '1';
+        loadingBox.classList.add('hidden');
+      }
     }
 
     function renderUI(info) {
@@ -225,24 +238,24 @@
       avatar.src = info.avatar || 'https://via.placeholder.com/150';
       avatar.onerror = () => { avatar.src = 'https://via.placeholder.com/150'; };
 
-      document.getElementById('statFollowers').innerText = typeof info.followers === 'number' ? formatNumber(info.followers) : info.followers;
-      document.getElementById('statFollowing').innerText = typeof info.following === 'number' ? formatNumber(info.following) : info.following;
-      document.getElementById('statLikes').innerText = typeof info.likes === 'number' ? formatNumber(info.likes) : info.likes;
-      document.getElementById('statVideos').innerText = typeof info.videos === 'number' ? formatNumber(info.videos) : info.videos;
+      document.getElementById('statFollowers').innerText = formatNumber(info.followers);
+      document.getElementById('statFollowing').innerText = formatNumber(info.following);
+      document.getElementById('statLikes').innerText = formatNumber(info.likes);
+      document.getElementById('statVideos').innerText = formatNumber(info.videos);
 
       document.getElementById('resultBox').classList.remove('hidden');
     }
 
     function showStatus(msg, type = 'info') {
       const box = document.getElementById('statusBox');
-      box.className = 'mt-4 p-3 rounded-xl text-xs sm:text-sm font-medium';
+      box.className = 'mt-4 p-4 rounded-xl text-sm font-medium break-words';
       
       if (type === 'error') {
-        box.classList.add('bg-red-900/40', 'border', 'border-red-600', 'text-red-300');
+        box.className += ' bg-red-900/40 border border-red-600 text-red-300';
       } else if (type === 'warning') {
-        box.classList.add('bg-amber-900/40', 'border', 'border-amber-600', 'text-amber-300');
+        box.className += ' bg-amber-900/40 border border-amber-600 text-amber-300';
       }
-      box.innerHTML = `<i class="fa-solid fa-circle-exclamation mr-1.5"></i>${msg}`;
+      box.innerHTML = `<i class="fa-solid fa-circle-exclamation mr-2"></i>${msg}`;
       box.classList.remove('hidden');
     }
   </script>
