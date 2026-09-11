@@ -102,6 +102,13 @@
       color: #64748b;
       margin-top: 2px;
     }
+    .bio {
+      font-size: 13px;
+      color: #cbd5e1;
+      margin-top: 10px;
+      padding: 0 10px;
+      word-break: break-word;
+    }
     .grid-stats {
       display: grid;
       grid-template-columns: 1fr 1fr;
@@ -133,7 +140,7 @@
     <h2>TikTok Checker</h2>
 
     <div class="input-box">
-      <input type="text" id="userInput" placeholder="Nhập username (vd: just.haru36)" autocomplete="off" autocorrect="off" autocapitalize="off">
+      <input type="text" id="userInput" placeholder="Nhập username..." autocomplete="off" autocorrect="off" autocapitalize="off">
       <button onclick="fetchTikTok()">Check</button>
     </div>
 
@@ -144,6 +151,7 @@
         <img id="avatar" class="avatar" src="" alt="Avatar">
         <div id="nickname" class="nickname"></div>
         <div id="uniqueId" class="username-sub"></div>
+        <div id="bio" class="bio"></div>
       </div>
 
       <div class="grid-stats">
@@ -175,46 +183,59 @@
       const result = document.getElementById('result');
 
       if (!user) {
-        alert('Bro chưa nhập username kìa :))');
+        alert('Bro chưa nhập username kìa!');
         return;
       }
 
       status.style.display = 'block';
       status.style.color = '#94a3b8';
-      status.innerText = 'Đang tải dữ liệu...';
+      status.innerText = 'Đang kéo data thật từ TikTok...';
       result.style.display = 'none';
 
-      // Sử dụng proxy corsproxy.io để vượt bức tường CORS trên iOS Safari
-      const proxyUrl = 'https://corsproxy.io/?';
-
       try {
-        const targetUrl = encodeURIComponent(`https://countik.com/api/exist/${user}`);
-        const res = await fetch(proxyUrl + targetUrl);
-        const existData = await res.json();
+        // Cào trực tiếp thẻ dữ liệu nhúng sẵn trong trang TikTok profile
+        const targetUrl = `https://www.tiktok.com/@${user}`;
+        const proxyUrl = `https://api.allorigins.win/get?url=${encodeURIComponent(targetUrl)}`;
+        
+        const res = await fetch(proxyUrl);
+        const json = await res.json();
+        const html = json.contents;
 
-        if (existData && existData.status && existData.sec_uid) {
-          const detailUrl = encodeURIComponent(`https://countik.com/api/user/detail/${existData.sec_uid}`);
-          const detailRes = await fetch(proxyUrl + detailUrl);
-          const data = await detailRes.json();
+        // Bóc tách thẻ script Universal Data chứa toàn bộ số liệu của user
+        const regex = /<script id="__UNIVERSAL_DATA_FOR_REHYDRATION__"[^>]*>([\s\S]*?)<\/script>/;
+        const match = html.match(regex);
 
-          document.getElementById('avatar').src = data.avatarThumb || '';
-          document.getElementById('nickname').innerText = data.nickname || user;
-          document.getElementById('uniqueId').innerText = '@' + (data.uniqueId || user);
+        if (match && match[1]) {
+          const parsed = JSON.parse(match[1]);
+          const defaultScope = parsed["__DEFAULT_SCOPE__"] || {};
+          const userDetail = defaultScope["webapp.user-detail"] || {};
+          const userInfo = userDetail.userInfo;
 
-          document.getElementById('followers').innerText = Number(data.followerCount || 0).toLocaleString();
-          document.getElementById('following').innerText = Number(data.followingCount || 0).toLocaleString();
-          document.getElementById('likes').innerText = Number(data.heartCount || 0).toLocaleString();
-          document.getElementById('videos').innerText = Number(data.videoCount || 0).toLocaleString();
+          if (userInfo) {
+            const u = userInfo.user;
+            const s = userInfo.stats;
 
-          status.style.display = 'none';
-          result.style.display = 'block';
-        } else {
-          status.style.color = '#f87171';
-          status.innerText = 'Không tìm thấy user hoặc nick bị riêng tư!';
+            document.getElementById('avatar').src = u.avatarLarger || u.avatarMedium || '';
+            document.getElementById('nickname').innerText = u.nickname || user;
+            document.getElementById('uniqueId').innerText = '@' + (u.uniqueId || user);
+            document.getElementById('bio').innerText = u.signature || 'Không có tiểu sử';
+
+            document.getElementById('followers').innerText = Number(s.followerCount || 0).toLocaleString();
+            document.getElementById('following').innerText = Number(s.followingCount || 0).toLocaleString();
+            document.getElementById('likes').innerText = Number(s.heartCount || 0).toLocaleString();
+            document.getElementById('videos').innerText = Number(s.videoCount || 0).toLocaleString();
+
+            status.style.display = 'none';
+            result.style.display = 'block';
+            return;
+          }
         }
+        
+        status.style.color = '#f87171';
+        status.innerText = 'Không tìm thấy thông tin của user này trên TikTok!';
       } catch (err) {
         status.style.color = '#f87171';
-        status.innerText = 'Không lấy được data. Bro thử nick khác xem sao!';
+        status.innerText = 'Lỗi phân tích dữ liệu! Thử lại sau ít phút nhé.';
       }
     }
   </script>
