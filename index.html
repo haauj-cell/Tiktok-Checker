@@ -102,13 +102,6 @@
       color: #64748b;
       margin-top: 2px;
     }
-    .bio {
-      font-size: 13px;
-      color: #cbd5e1;
-      margin-top: 10px;
-      padding: 0 10px;
-      word-break: break-word;
-    }
     .grid-stats {
       display: grid;
       grid-template-columns: 1fr 1fr;
@@ -140,8 +133,8 @@
     <h2>TikTok Checker</h2>
 
     <div class="input-box">
-      <input type="text" id="userInput" placeholder="Nhập username..." autocomplete="off" autocorrect="off" autocapitalize="off">
-      <button onclick="fetchTikTok()">Check</button>
+      <input type="text" id="userInput" placeholder="Nhập username (vd: just.haru36)" autocomplete="off" autocorrect="off" autocapitalize="off">
+      <button onclick="fetchCountik()">Check</button>
     </div>
 
     <div id="status"></div>
@@ -151,7 +144,6 @@
         <img id="avatar" class="avatar" src="" alt="Avatar">
         <div id="nickname" class="nickname"></div>
         <div id="uniqueId" class="username-sub"></div>
-        <div id="bio" class="bio"></div>
       </div>
 
       <div class="grid-stats">
@@ -176,66 +168,60 @@
   </div>
 
   <script>
-    async function fetchTikTok() {
+    async function requestJson(targetUrl) {
+      // Dùng endpoint CodeTabs Proxy hỗ trợ forward full header cho Countik
+      const proxy = 'https://api.codetabs.com/v1/proxy/?quest=' + encodeURIComponent(targetUrl);
+      const res = await fetch(proxy);
+      return await res.json();
+    }
+
+    async function fetchCountik() {
       const input = document.getElementById('userInput').value.trim();
       const user = input.replace('@', '');
       const status = document.getElementById('status');
       const result = document.getElementById('result');
 
       if (!user) {
-        alert('Bro chưa nhập username kìa!');
+        alert('Bro chưa nhập username kìa :))');
         return;
       }
 
       status.style.display = 'block';
       status.style.color = '#94a3b8';
-      status.innerText = 'Đang kéo data thật từ TikTok...';
+      status.innerText = 'Đang kiểm tra thông tin trên Countik...';
       result.style.display = 'none';
 
       try {
-        // Cào trực tiếp thẻ dữ liệu nhúng sẵn trong trang TikTok profile
-        const targetUrl = `https://www.tiktok.com/@${user}`;
-        const proxyUrl = `https://api.allorigins.win/get?url=${encodeURIComponent(targetUrl)}`;
-        
-        const res = await fetch(proxyUrl);
-        const json = await res.json();
-        const html = json.contents;
+        // Bước 1: Kiểm tra username và lấy sec_uid
+        const checkData = await requestJson(`https://countik.com/api/exist/${user}`);
 
-        // Bóc tách thẻ script Universal Data chứa toàn bộ số liệu của user
-        const regex = /<script id="__UNIVERSAL_DATA_FOR_REHYDRATION__"[^>]*>([\s\S]*?)<\/script>/;
-        const match = html.match(regex);
+        if (checkData && checkData.status && checkData.sec_uid) {
+          status.innerText = 'Đang tải thông số chi tiết...';
+          
+          // Bước 2: Lấy dữ liệu chi tiết bằng sec_uid
+          const detailData = await requestJson(`https://countik.com/api/user/detail/${checkData.sec_uid}`);
 
-        if (match && match[1]) {
-          const parsed = JSON.parse(match[1]);
-          const defaultScope = parsed["__DEFAULT_SCOPE__"] || {};
-          const userDetail = defaultScope["webapp.user-detail"] || {};
-          const userInfo = userDetail.userInfo;
+          if (detailData) {
+            document.getElementById('avatar').src = detailData.avatarThumb || '';
+            document.getElementById('nickname').innerText = detailData.nickname || user;
+            document.getElementById('uniqueId').innerText = '@' + (detailData.uniqueId || user);
 
-          if (userInfo) {
-            const u = userInfo.user;
-            const s = userInfo.stats;
-
-            document.getElementById('avatar').src = u.avatarLarger || u.avatarMedium || '';
-            document.getElementById('nickname').innerText = u.nickname || user;
-            document.getElementById('uniqueId').innerText = '@' + (u.uniqueId || user);
-            document.getElementById('bio').innerText = u.signature || 'Không có tiểu sử';
-
-            document.getElementById('followers').innerText = Number(s.followerCount || 0).toLocaleString();
-            document.getElementById('following').innerText = Number(s.followingCount || 0).toLocaleString();
-            document.getElementById('likes').innerText = Number(s.heartCount || 0).toLocaleString();
-            document.getElementById('videos').innerText = Number(s.videoCount || 0).toLocaleString();
+            document.getElementById('followers').innerText = Number(detailData.followerCount || 0).toLocaleString();
+            document.getElementById('following').innerText = Number(detailData.followingCount || 0).toLocaleString();
+            document.getElementById('likes').innerText = Number(detailData.heartCount || 0).toLocaleString();
+            document.getElementById('videos').innerText = Number(detailData.videoCount || 0).toLocaleString();
 
             status.style.display = 'none';
             result.style.display = 'block';
             return;
           }
         }
-        
+
         status.style.color = '#f87171';
-        status.innerText = 'Không tìm thấy thông tin của user này trên TikTok!';
+        status.innerText = 'Countik chưa lưu cache nick này hoặc tài khoản không tồn tại!';
       } catch (err) {
         status.style.color = '#f87171';
-        status.innerText = 'Lỗi phân tích dữ liệu! Thử lại sau ít phút nhé.';
+        status.innerText = 'Cổng kết nối proxy đang bận, bro bấm Check lại lần nữa nhé!';
       }
     }
   </script>
