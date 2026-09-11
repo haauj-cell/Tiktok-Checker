@@ -43,7 +43,7 @@
       color: #fff;
       padding: 12px 16px;
       border-radius: 12px;
-      font-size: 16px; /* Chặn iOS tự phóng to màn hình */
+      font-size: 16px;
       outline: none;
     }
     input:focus {
@@ -102,13 +102,6 @@
       color: #64748b;
       margin-top: 2px;
     }
-    .bio {
-      font-size: 13px;
-      color: #cbd5e1;
-      margin-top: 10px;
-      padding: 0 10px;
-      word-break: break-word;
-    }
     .grid-stats {
       display: grid;
       grid-template-columns: 1fr 1fr;
@@ -140,7 +133,7 @@
     <h2>TikTok Checker</h2>
 
     <div class="input-box">
-      <input type="text" id="userInput" placeholder="Nhập username (vd: tiktok)" autocomplete="off" autocorrect="off" autocapitalize="off">
+      <input type="text" id="userInput" placeholder="Nhập username (vd: just.haru36)" autocomplete="off" autocorrect="off" autocapitalize="off">
       <button onclick="fetchTikTok()">Check</button>
     </div>
 
@@ -151,7 +144,6 @@
         <img id="avatar" class="avatar" src="" alt="Avatar">
         <div id="nickname" class="nickname"></div>
         <div id="uniqueId" class="username-sub"></div>
-        <div id="bio" class="bio"></div>
       </div>
 
       <div class="grid-stats">
@@ -165,11 +157,11 @@
         </div>
         <div class="stat-item">
           <div class="stat-value" id="likes">0</div>
-          <div class="stat-title">Tổng Lượt Tim</div>
+          <div class="stat-title">Tổng Tim</div>
         </div>
         <div class="stat-item">
           <div class="stat-value" id="videos">0</div>
-          <div class="stat-title">Tổng Video</div>
+          <div class="stat-title">Video</div>
         </div>
       </div>
     </div>
@@ -189,22 +181,25 @@
 
       status.style.display = 'block';
       status.style.color = '#94a3b8';
-      status.innerText = 'Đang tải dữ liệu từ TikTok...';
+      status.innerText = 'Đang tải dữ liệu...';
       result.style.display = 'none';
 
+      // Sử dụng proxy corsproxy.io để vượt bức tường CORS trên iOS Safari
+      const proxyUrl = 'https://corsproxy.io/?';
+
       try {
-        // Sử dụng public endpoint phân tích profile TikTok không cần nhập key
-        const res = await fetch(`https://countik.com/api/exist/${user}`);
+        const targetUrl = encodeURIComponent(`https://countik.com/api/exist/${user}`);
+        const res = await fetch(proxyUrl + targetUrl);
         const existData = await res.json();
 
         if (existData && existData.status && existData.sec_uid) {
-          const detailRes = await fetch(`https://countik.com/api/user/detail/${existData.sec_uid}`);
+          const detailUrl = encodeURIComponent(`https://countik.com/api/user/detail/${existData.sec_uid}`);
+          const detailRes = await fetch(proxyUrl + detailUrl);
           const data = await detailRes.json();
 
           document.getElementById('avatar').src = data.avatarThumb || '';
           document.getElementById('nickname').innerText = data.nickname || user;
           document.getElementById('uniqueId').innerText = '@' + (data.uniqueId || user);
-          document.getElementById('bio').innerText = data.signature || 'Không có tiểu sử';
 
           document.getElementById('followers').innerText = Number(data.followerCount || 0).toLocaleString();
           document.getElementById('following').innerText = Number(data.followingCount || 0).toLocaleString();
@@ -215,11 +210,11 @@
           result.style.display = 'block';
         } else {
           status.style.color = '#f87171';
-          status.innerText = 'Không tìm thấy tài khoản hoặc nick bị riêng tư!';
+          status.innerText = 'Không tìm thấy user hoặc nick bị riêng tư!';
         }
       } catch (err) {
         status.style.color = '#f87171';
-        status.innerText = 'Lỗi kết nối tới máy chủ! Bro thử lại sau nhé.';
+        status.innerText = 'Không lấy được data. Bro thử nick khác xem sao!';
       }
     }
   </script>
