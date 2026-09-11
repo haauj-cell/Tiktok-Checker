@@ -1,0 +1,227 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+  <title>TikTok Profile Checker</title>
+  <style>
+    * { box-sizing: border-box; margin: 0; padding: 0; font-family: -apple-system, BlinkMacSystemFont, "SF Pro Text", "Segoe UI", Roboto, sans-serif; }
+    body {
+      background-color: #0b0f19;
+      color: #f1f5f9;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      min-height: 100vh;
+      padding: 16px;
+    }
+    .container {
+      width: 100%;
+      max-width: 400px;
+      background: #151d30;
+      border: 1px solid #1e293b;
+      border-radius: 20px;
+      padding: 24px;
+      box-shadow: 0 12px 30px rgba(0, 0, 0, 0.6);
+    }
+    h2 {
+      text-align: center;
+      margin-bottom: 20px;
+      font-size: 22px;
+      color: #38bdf8;
+      font-weight: 700;
+    }
+    .input-box {
+      display: flex;
+      gap: 10px;
+      margin-bottom: 18px;
+    }
+    input {
+      flex: 1;
+      background: #0b0f19;
+      border: 1px solid #334155;
+      color: #fff;
+      padding: 12px 16px;
+      border-radius: 12px;
+      font-size: 16px; /* Chặn iOS tự phóng to màn hình */
+      outline: none;
+    }
+    input:focus {
+      border-color: #38bdf8;
+    }
+    button {
+      background: #2563eb;
+      color: #fff;
+      border: none;
+      padding: 12px 20px;
+      border-radius: 12px;
+      font-weight: 600;
+      font-size: 15px;
+      cursor: pointer;
+    }
+    button:active {
+      transform: scale(0.96);
+      background: #1d4ed8;
+    }
+    #status {
+      text-align: center;
+      font-size: 14px;
+      color: #94a3b8;
+      margin-bottom: 15px;
+      display: none;
+    }
+    .result-card {
+      display: none;
+      animation: fadeIn 0.3s ease;
+    }
+    @keyframes fadeIn {
+      from { opacity: 0; transform: translateY(6px); }
+      to { opacity: 1; transform: translateY(0); }
+    }
+    .profile-header {
+      text-align: center;
+      margin-bottom: 20px;
+    }
+    .avatar {
+      width: 84px;
+      height: 84px;
+      border-radius: 50%;
+      border: 3px solid #38bdf8;
+      object-fit: cover;
+      margin: 0 auto 10px;
+      display: block;
+      background: #0b0f19;
+    }
+    .nickname {
+      font-size: 18px;
+      font-weight: 700;
+      color: #fff;
+    }
+    .username-sub {
+      font-size: 13px;
+      color: #64748b;
+      margin-top: 2px;
+    }
+    .bio {
+      font-size: 13px;
+      color: #cbd5e1;
+      margin-top: 10px;
+      padding: 0 10px;
+      word-break: break-word;
+    }
+    .grid-stats {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 12px;
+      margin-top: 16px;
+    }
+    .stat-item {
+      background: #0b0f19;
+      border: 1px solid #1e293b;
+      padding: 14px 10px;
+      border-radius: 14px;
+      text-align: center;
+    }
+    .stat-value {
+      font-size: 18px;
+      font-weight: 700;
+      color: #38bdf8;
+    }
+    .stat-title {
+      font-size: 12px;
+      color: #94a3b8;
+      margin-top: 4px;
+    }
+  </style>
+</head>
+<body>
+
+  <div class="container">
+    <h2>TikTok Checker</h2>
+
+    <div class="input-box">
+      <input type="text" id="userInput" placeholder="Nhập username (vd: tiktok)" autocomplete="off" autocorrect="off" autocapitalize="off">
+      <button onclick="fetchTikTok()">Check</button>
+    </div>
+
+    <div id="status"></div>
+
+    <div id="result" class="result-card">
+      <div class="profile-header">
+        <img id="avatar" class="avatar" src="" alt="Avatar">
+        <div id="nickname" class="nickname"></div>
+        <div id="uniqueId" class="username-sub"></div>
+        <div id="bio" class="bio"></div>
+      </div>
+
+      <div class="grid-stats">
+        <div class="stat-item">
+          <div class="stat-value" id="followers">0</div>
+          <div class="stat-title">Followers</div>
+        </div>
+        <div class="stat-item">
+          <div class="stat-value" id="following">0</div>
+          <div class="stat-title">Đang Follow</div>
+        </div>
+        <div class="stat-item">
+          <div class="stat-value" id="likes">0</div>
+          <div class="stat-title">Tổng Lượt Tim</div>
+        </div>
+        <div class="stat-item">
+          <div class="stat-value" id="videos">0</div>
+          <div class="stat-title">Tổng Video</div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    async function fetchTikTok() {
+      const input = document.getElementById('userInput').value.trim();
+      const user = input.replace('@', '');
+      const status = document.getElementById('status');
+      const result = document.getElementById('result');
+
+      if (!user) {
+        alert('Bro chưa nhập username kìa :))');
+        return;
+      }
+
+      status.style.display = 'block';
+      status.style.color = '#94a3b8';
+      status.innerText = 'Đang tải dữ liệu từ TikTok...';
+      result.style.display = 'none';
+
+      try {
+        // Sử dụng public endpoint phân tích profile TikTok không cần nhập key
+        const res = await fetch(`https://countik.com/api/exist/${user}`);
+        const existData = await res.json();
+
+        if (existData && existData.status && existData.sec_uid) {
+          const detailRes = await fetch(`https://countik.com/api/user/detail/${existData.sec_uid}`);
+          const data = await detailRes.json();
+
+          document.getElementById('avatar').src = data.avatarThumb || '';
+          document.getElementById('nickname').innerText = data.nickname || user;
+          document.getElementById('uniqueId').innerText = '@' + (data.uniqueId || user);
+          document.getElementById('bio').innerText = data.signature || 'Không có tiểu sử';
+
+          document.getElementById('followers').innerText = Number(data.followerCount || 0).toLocaleString();
+          document.getElementById('following').innerText = Number(data.followingCount || 0).toLocaleString();
+          document.getElementById('likes').innerText = Number(data.heartCount || 0).toLocaleString();
+          document.getElementById('videos').innerText = Number(data.videoCount || 0).toLocaleString();
+
+          status.style.display = 'none';
+          result.style.display = 'block';
+        } else {
+          status.style.color = '#f87171';
+          status.innerText = 'Không tìm thấy tài khoản hoặc nick bị riêng tư!';
+        }
+      } catch (err) {
+        status.style.color = '#f87171';
+        status.innerText = 'Lỗi kết nối tới máy chủ! Bro thử lại sau nhé.';
+      }
+    }
+  </script>
+</body>
+</html>
