@@ -3,11 +3,11 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>TikTok User Checker - TikWM</title>
+  <title>TikTok User Checker</title>
   <script src="https://cdn.tailwindcss.com"></script>
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
   <style>
-    body { background: #0f1015; font-family: system-ui, sans-serif; }
+    body { background: #0d0e15; font-family: system-ui, sans-serif; }
   </style>
 </head>
 <body class="min-h-screen text-slate-100 flex flex-col items-center p-4">
@@ -16,24 +16,24 @@
     <h1 class="text-2xl font-black text-pink-500 flex items-center justify-center gap-2">
       <i class="fa-brands fa-tiktok text-cyan-400"></i> TikTok Checker
     </h1>
-    <p class="text-xs text-slate-400 mt-1">API TikWM trực tiếp - Không lo lỗi CORS</p>
+    <p class="text-xs text-slate-400 mt-1">Hệ thống tra cứu dữ liệu trực tiếp</p>
   </div>
 
-  <div class="w-full max-w-md bg-[#191b24] border border-slate-800 rounded-2xl p-5 shadow-xl">
+  <div class="w-full max-w-md bg-[#181924] border border-slate-800 rounded-2xl p-5 shadow-2xl">
     <div class="flex flex-col gap-3">
       <div class="relative">
         <span class="absolute inset-y-0 left-0 flex items-center pl-3 text-slate-500 font-bold">@</span>
         <input 
           type="text" 
           id="usernameInput" 
-          placeholder="Nhập username (ví dụ: mrbeast, just.haru36)..." 
-          class="w-full pl-8 pr-3 py-3 bg-[#11121a] border border-slate-700 rounded-xl text-white text-sm outline-none focus:border-pink-500"
+          placeholder="Nhập username (ví dụ: just.haru36)..." 
+          class="w-full pl-8 pr-3 py-3 bg-[#10111a] border border-slate-700 rounded-xl text-white text-sm outline-none focus:border-pink-500"
         />
       </div>
       <button 
         id="btnCheck" 
         onclick="checkUser()" 
-        class="w-full py-3 bg-gradient-to-r from-pink-500 to-rose-600 active:scale-95 font-semibold rounded-xl text-white text-sm transition">
+        class="w-full py-3 bg-gradient-to-r from-pink-500 to-rose-600 active:scale-95 font-semibold rounded-xl text-white text-sm transition shadow-lg shadow-pink-500/20">
         Tra Cứu
       </button>
     </div>
@@ -44,29 +44,29 @@
       <img id="avatar" src="" class="w-20 h-20 rounded-full border-2 border-cyan-400 object-cover bg-slate-800 mb-2" />
       <div id="nickname" class="font-bold text-base text-white"></div>
       <a id="handle" href="#" target="_blank" class="text-xs text-slate-400 hover:text-cyan-400 mb-3"></a>
-      <p id="signature" class="text-xs text-slate-300 text-center bg-[#11121a] p-2.5 rounded-lg w-full mb-4 break-words"></p>
+      <p id="signature" class="text-xs text-slate-300 text-center bg-[#10111a] p-2.5 rounded-lg w-full mb-4 break-words"></p>
 
       <div class="grid grid-cols-2 gap-2 w-full text-center mb-4">
-        <div class="bg-[#11121a] p-2.5 rounded-xl border border-slate-800/80">
+        <div class="bg-[#10111a] p-2.5 rounded-xl border border-slate-800/80">
           <span class="text-[10px] text-slate-500 block uppercase font-semibold">Followers</span>
           <span id="followers" class="text-cyan-400 font-bold text-base">0</span>
         </div>
-        <div class="bg-[#11121a] p-2.5 rounded-xl border border-slate-800/80">
+        <div class="bg-[#10111a] p-2.5 rounded-xl border border-slate-800/80">
           <span class="text-[10px] text-slate-500 block uppercase font-semibold">Đang Follow</span>
           <span id="following" class="text-slate-200 font-bold text-base">0</span>
         </div>
-        <div class="bg-[#11121a] p-2.5 rounded-xl border border-slate-800/80">
+        <div class="bg-[#10111a] p-2.5 rounded-xl border border-slate-800/80">
           <span class="text-[10px] text-slate-500 block uppercase font-semibold">Lượt Thích</span>
           <span id="likes" class="text-pink-500 font-bold text-base">0</span>
         </div>
-        <div class="bg-[#11121a] p-2.5 rounded-xl border border-slate-800/80">
+        <div class="bg-[#10111a] p-2.5 rounded-xl border border-slate-800/80">
           <span class="text-[10px] text-slate-500 block uppercase font-semibold">Videos</span>
           <span id="videos" class="text-amber-400 font-bold text-base">0</span>
         </div>
       </div>
 
-      <a id="profileLink" href="#" target="_blank" class="w-full py-2 bg-slate-800 hover:bg-slate-700 text-center rounded-xl text-xs font-medium text-white transition">
-        Xem trang cá nhân
+      <a id="profileLink" href="#" target="_blank" class="w-full py-2.5 bg-slate-800 hover:bg-slate-700 text-center rounded-xl text-xs font-medium text-white transition">
+        Mở trang TikTok
       </a>
     </div>
   </div>
@@ -74,9 +74,13 @@
   <script>
     function fmt(n) { return Number(n || 0).toLocaleString('vi-VN'); }
 
+    document.getElementById('usernameInput').addEventListener('keypress', (e) => {
+      if (e.key === 'Enter') checkUser();
+    });
+
     async function checkUser() {
       const input = document.getElementById('usernameInput');
-      let username = input.value.trim().replace(/^@/, '');
+      let username = input.value.trim().toLowerCase().replace(/^@/, '');
       if (username.includes('tiktok.com/@')) {
         username = username.split('tiktok.com/@')[1].split('/')[0].split('?')[0];
       }
@@ -91,24 +95,23 @@
       }
 
       btn.disabled = true;
-      btn.innerText = 'Đang kiểm tra...';
+      btn.innerText = 'Đang tra cứu...';
       status.classList.add('hidden');
       result.classList.add('hidden');
 
       try {
-        // Gọi thẳng vào TikWM API
         const res = await fetch(`https://www.tikwm.com/api/user/info?unique_id=${encodeURIComponent(username)}`);
         const json = await res.json();
 
         if (json.code !== 0 || !json.data) {
-          throw new Error(json.msg || 'Không tìm thấy tài khoản TikTok này.');
+          throw new Error(json.msg || 'Tài khoản không tồn tại hoặc đã bị khóa.');
         }
 
         const u = json.data.user;
         const s = json.data.stats;
 
         document.getElementById('avatar').src = u.avatarLarger || u.avatarMedium || u.avatarThumb;
-        document.getElementById('nickname').innerText = u.nickname;
+        document.getElementById('nickname').innerText = u.nickname || u.uniqueId;
         document.getElementById('handle').innerText = '@' + u.uniqueId;
         document.getElementById('handle').href = `https://www.tiktok.com/@${u.uniqueId}`;
         document.getElementById('profileLink').href = `https://www.tiktok.com/@${u.uniqueId}`;
@@ -121,7 +124,7 @@
 
         result.classList.remove('hidden');
       } catch (err) {
-        showStatus(err.message || 'Lỗi tra cứu, vui lòng thử lại.', 'red');
+        showStatus(err.message || 'Lỗi kết nối máy chủ, thử lại sau ít phút.', 'red');
       } finally {
         btn.disabled = false;
         btn.innerText = 'Tra Cứu';
@@ -130,7 +133,12 @@
 
     function showStatus(msg, color) {
       const s = document.getElementById('status');
-      s.className = `mt-4 p-3 rounded-xl text-xs text-center bg-${color}-950/50 border border-${color}-600 text-${color}-300`;
+      s.className = 'mt-4 p-3 rounded-xl text-xs text-center border';
+      if (color === 'red') {
+        s.className += ' bg-red-900/40 border-red-600 text-red-300';
+      } else {
+        s.className += ' bg-amber-900/40 border-amber-600 text-amber-300';
+      }
       s.innerText = msg;
       s.classList.remove('hidden');
     }
